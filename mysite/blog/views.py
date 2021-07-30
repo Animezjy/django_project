@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, HttpResponse
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.mail import send_mail
 from blog.models import Post
-from blog.myforms import EmailPostForm
+from blog.myforms import EmailPostForm, CommentForm
 
 
 def post_list(request):
@@ -24,6 +24,21 @@ def post_list(request):
 def post_detail(request, year, month, day, post):
     post = get_object_or_404(Post, slug=post, publish__year=year,
                              publish__month=month, publish__day=day)
+    comments = post.comments.filter(active=True)
+
+    new_comment = None
+
+    if request.method == "POST":
+        comment_form = CommentForm(data=request.POST)
+        if comment_form.is_valid():
+            # 通过表单直接创建新数据对象，但是不要保存到数据库中
+            new_comment = comment_form.save(commit=False)
+            # 设置外键为当前文章
+            new_comment.post = post
+            # 将评论数据对象写入数据库
+            new_comment.save()
+    else:
+        comment_form = CommentForm()
     return render(request, 'blog/post/post_detail.html', locals())
 
 
